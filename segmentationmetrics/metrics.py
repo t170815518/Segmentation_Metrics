@@ -1,7 +1,10 @@
 import numpy as np
 import pandas as pd
 
-from . import surface_distance as sd
+try:
+    from . import surface_distance as sd
+except ImportError:
+    import surface_distance as sd
 
 
 class SegmentationMetrics:
@@ -34,7 +37,7 @@ class SegmentationMetrics:
         than the true volume, negative values show the true volume is larger
         than the predicted volume.
     """
-    def __init__(self, prediction, truth, zoom, percentile=95, symmetric=True):
+    def __init__(self, prediction, truth, zoom, percentile=95, symmetric=True, threshold=0.5):
         """
         Initialises the SegmentationMetrics class instance.
 
@@ -57,9 +60,12 @@ class SegmentationMetrics:
             surface distance from surface A to surface B and the mean
             surface distance from surface B to surface A. If false, a tuple
             is returned with both mean surface distances.
+        threshold: float, default 0.5
+            The classification threshold that converts probability into
+            discrete class label.
         """
-        self.prediction = prediction > 0.5
-        self.truth = truth > 0.5
+        self.prediction = prediction > threshold
+        self.truth = truth > threshold
         self.zoom = zoom
         self.dice = self._dice()
         self.jaccard = self._jaccard()
@@ -165,3 +171,12 @@ class SegmentationMetrics:
 
     def _volume_difference(self):
         return self.predicted_volume - self.true_volume
+
+
+if __name__ == '__main__':
+    mask_automatic = np.abs(np.random.randn(512, 512))
+    mask_manual = np.random.randint(low=0, high=1, size=(512, 512))
+    for x in range(1, 10):
+        metrics = SegmentationMetrics(mask_automatic, mask_manual, zoom=(1, 1), threshold=x * 0.1)
+        df = metrics.get_df()
+        print(df)
